@@ -83,7 +83,9 @@ from chromadb.utils.embedding_functions.chroma_cloud_qwen_embedding_function imp
 from chromadb.utils.embedding_functions.chroma_cloud_splade_embedding_function import (
     ChromaCloudSpladeEmbeddingFunction,
 )
-
+from chromadb.utils.embedding_functions.pylate_colbert_embedding_function import (
+    PylateColBERTEmbeddingFunction,
+)
 
 # Get all the class names for backward compatibility
 _all_classes: Set[str] = {
@@ -116,6 +118,7 @@ _all_classes: Set[str] = {
     "Bm25EmbeddingFunction",
     "ChromaCloudQwenEmbeddingFunction",
     "ChromaCloudSpladeEmbeddingFunction",
+    "PylateColBERTEmbeddingFunction",
 }
 
 
@@ -150,6 +153,7 @@ known_embedding_functions: Dict[str, Type[EmbeddingFunction]] = {  # type: ignor
     "cloudflare_workers_ai": CloudflareWorkersAIEmbeddingFunction,
     "together_ai": TogetherAIEmbeddingFunction,
     "chroma-cloud-qwen": ChromaCloudQwenEmbeddingFunction,
+    "pylate_colbert": PylateColBERTEmbeddingFunction,
 }
 
 sparse_known_embedding_functions: Dict[str, Type[SparseEmbeddingFunction]] = {  # type: ignore
@@ -273,6 +277,7 @@ __all__ = [
     "Bm25EmbeddingFunction",
     "ChromaCloudQwenEmbeddingFunction",
     "ChromaCloudSpladeEmbeddingFunction",
+    "PylateColBERTEmbeddingFunction",
     "register_embedding_function",
     "config_to_embedding_function",
     "known_embedding_functions",
