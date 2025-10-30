@@ -163,6 +163,60 @@ impl GrpcHeapService {
             .map_err(GrpcHeapServiceError::FailedToGetSummary)?;
         Ok(response.into_inner())
     }
+
+    /// Prune completed tasks from all heap service shards
+    /// Returns aggregated statistics from all shards
+    #[tracing::instrument(skip(self))]
+    pub async fn prune_all_shards(
+        &mut self,
+        limits: Option<chroma_proto::Limits>,
+    ) -> Result<chroma_proto::PruneStats, GrpcHeapServiceError> {
+        let clients = self.client_assigner.all();
+
+        if clients.is_empty() {
+            tracing::warn!("No heap service nodes available for pruning");
+            return Ok(chroma_proto::PruneStats {
+                items_pruned: 0,
+                items_retained: 0,
+                buckets_deleted: 0,
+                buckets_updated: 0,
+            });
+        }
+
+        let mut total_stats = chroma_proto::PruneStats {
+            items_pruned: 0,
+            items_retained: 0,
+            buckets_deleted: 0,
+            buckets_updated: 0,
+        };
+
+        for mut client in clients {
+            let request = Request::new(chroma_proto::PruneRequest {
+                limits: limits.clone(),
+            });
+
+            match client
+                .prune(request)
+                .instrument(tracing::info_span!("heap_service_prune_shard"))
+                .await
+            {
+                Ok(response) => {
+                    if let Some(stats) = response.into_inner().stats {
+                        total_stats.items_pruned += stats.items_pruned;
+                        total_stats.items_retained += stats.items_retained;
+                        total_stats.buckets_deleted += stats.buckets_deleted;
+                        total_stats.buckets_updated += stats.buckets_updated;
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Failed to prune heap shard: {}", e);
+                    // Continue pruning other shards even if one fails
+                }
+            }
+        }
+
+        Ok(total_stats)
+    }
 }
 
 #[async_trait]
