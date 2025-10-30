@@ -380,9 +380,15 @@ impl ServiceBasedFrontend {
             .map_err(|err| Box::new(err) as Box<dyn ChromaError>)?;
         if self.enable_schema {
             for collection in collections.iter_mut() {
-                collection
-                    .reconcile_schema_with_config(self.default_knn_index)
-                    .map_err(GetCollectionsError::InvalidSchema)?;
+                if collection.schema.is_none() {
+                    collection.schema = Some(
+                        Schema::convert_collection_config_to_schema(
+                            &collection.config,
+                            self.default_knn_index,
+                        )
+                        .map_err(GetCollectionsError::InvalidSchema)?,
+                    );
+                }
             }
         }
         Ok(collections)
@@ -424,9 +430,15 @@ impl ServiceBasedFrontend {
             .map_err(|err| Box::new(err) as Box<dyn ChromaError>)?;
         if self.enable_schema {
             for collection in &mut collections {
-                collection
-                    .reconcile_schema_with_config(self.default_knn_index)
-                    .map_err(GetCollectionError::InvalidSchema)?;
+                if collection.schema.is_none() {
+                    collection.schema = Some(
+                        Schema::convert_collection_config_to_schema(
+                            &collection.config,
+                            self.default_knn_index,
+                        )
+                        .map_err(GetCollectionError::InvalidSchema)?,
+                    );
+                }
             }
         }
         collections
@@ -448,10 +460,14 @@ impl ServiceBasedFrontend {
             .await
             .map_err(|err| Box::new(err) as Box<dyn ChromaError>)?;
 
-        if self.enable_schema {
-            collection
-                .reconcile_schema_with_config(self.default_knn_index)
-                .map_err(GetCollectionByCrnError::InvalidSchema)?;
+        if self.enable_schema && collection.schema.is_none() {
+            collection.schema = Some(
+                Schema::convert_collection_config_to_schema(
+                    &collection.config,
+                    self.default_knn_index,
+                )
+                .map_err(GetCollectionByCrnError::InvalidSchema)?,
+            );
         }
         Ok(collection)
     }
@@ -628,10 +644,14 @@ impl ServiceBasedFrontend {
             .await;
         // this is done in the case that get_or_create was a get, in which case we should reconcile the schema and config
         // that was retrieved from sysdb, rather than the one that was passed in
-        if self.enable_schema {
-            collection
-                .reconcile_schema_with_config(self.default_knn_index)
-                .map_err(CreateCollectionError::InvalidSchema)?;
+        if self.enable_schema && collection.schema.is_none() {
+            collection.schema = Some(
+                Schema::convert_collection_config_to_schema(
+                    &collection.config,
+                    self.default_knn_index,
+                )
+                .map_err(CreateCollectionError::InvalidSchema)?,
+            );
         }
         Ok(collection)
     }
@@ -733,10 +753,15 @@ impl ServiceBasedFrontend {
                 target_collection_name,
             )
             .await?;
-        collection_and_segments
-            .collection
-            .reconcile_schema_with_config(self.default_knn_index)
-            .map_err(ForkCollectionError::InvalidSchema)?;
+        if collection_and_segments.collection.schema.is_none() {
+            collection_and_segments.collection.schema = Some(
+                Schema::convert_collection_config_to_schema(
+                    &collection_and_segments.collection.config,
+                    self.default_knn_index,
+                )
+                .map_err(ForkCollectionError::InvalidSchema)?,
+            );
+        }
         let collection = collection_and_segments.collection.clone();
         let latest_collection_logical_size_bytes = collection_and_segments
             .collection

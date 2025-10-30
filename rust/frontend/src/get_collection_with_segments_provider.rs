@@ -185,14 +185,16 @@ impl CollectionsWithSegmentsProvider {
                 .await?
         };
 
-        // reconcile schema and config
-        let reconciled_schema = Schema::reconcile_schema_and_config(
-            collection_and_segments_sysdb.collection.schema.as_ref(),
-            Some(&collection_and_segments_sysdb.collection.config),
-            knn_index,
-        )
-        .map_err(CollectionsWithSegmentsProviderError::InvalidSchema)?;
-        collection_and_segments_sysdb.collection.schema = Some(reconciled_schema);
+        if collection_and_segments_sysdb.collection.schema.is_none() {
+            collection_and_segments_sysdb.collection.schema = Some(
+                Schema::convert_collection_config_to_schema(
+                    &collection_and_segments_sysdb.collection.config,
+                    knn_index,
+                )
+                .map_err(CollectionsWithSegmentsProviderError::InvalidSchema)?,
+            );
+        }
+
         self.set_collection_with_segments(collection_and_segments_sysdb.clone())
             .await;
         Ok(collection_and_segments_sysdb)

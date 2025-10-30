@@ -11,7 +11,7 @@ use chroma_segment::local_segment_manager::LocalSegmentManager;
 use chroma_sqlite::db::SqliteDb;
 use chroma_sysdb::SysDb;
 use chroma_system::System;
-use chroma_types::{CollectionUuid, KnnIndex, ListCollectionsRequest};
+use chroma_types::{CollectionUuid, KnnIndex, ListCollectionsRequest, Schema};
 use clap::Parser;
 use colored::Colorize;
 use dialoguer::Confirm;
@@ -108,10 +108,15 @@ async fn trigger_vector_segments_max_seq_id_migration(
     for collection_id in collection_ids {
         let mut collection = sysdb.get_collection_with_segments(collection_id).await?;
 
-        collection
-            .collection
-            .reconcile_schema_with_config(default_knn_index)
-            .map_err(|e| Box::new(e) as Box<dyn Error>)?;
+        if collection.collection.schema.is_none() {
+            collection.collection.schema = Some(
+                Schema::convert_collection_config_to_schema(
+                    &collection.collection.config,
+                    default_knn_index,
+                )
+                .map_err(|e| Box::new(e) as Box<dyn Error>)?,
+            );
+        }
 
         // If collection is uninitialized, that means nothing has been written yet.
         let dim = match collection.collection.dimension {
